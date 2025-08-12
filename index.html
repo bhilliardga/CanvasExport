@@ -39,8 +39,7 @@
   <p id="msg"></p>
 
   <script>
-    const backend = location.origin.replace(/\/$/, ""); // same origin by default
-
+    const backend = "https://canvasexport.onrender.com";
     document.getElementById("f").addEventListener("submit", async (e) => {
       e.preventDefault();
       const api_base = document.getElementById("api_base").value.trim();
