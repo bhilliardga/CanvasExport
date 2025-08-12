@@ -1,14 +1,18 @@
-import io, os, shutil, tempfile, zipfile, json, time
+import io
+import os
+import re
+import shutil
+import tempfile
+import zipfile
+import json
+import time
 from typing import List, Dict, Any, Optional, Tuple, Set
+
+import requests
+from html.parser import HTMLParser
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
-import requests
-from html.parser import HTMLParser
-import re
-import os
-import requests
-from typing import Set
 
 app = FastAPI(title="Canvas Exporter")
 app.add_middleware(
@@ -361,4 +365,5 @@ def export_canvas(payload: Dict[str, Any]):
     finally:
         # wipe workspace
         shutil.rmtree(tmp, ignore_errors=True)
+
 
