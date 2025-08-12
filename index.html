@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <title>Canvas Export</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <style>
+    body { font-family:sans-serif; max-width:680px; margin:40px auto; padding:0 16px; }
+    label { display:block; margin:12px 0 6px; }
+    input[type=text], input[type=password] { width:100%; padding:10px; }
+    .row { display:flex; gap:12px; align-items:center; }
+    button { padding:10px 14px; border:0; border-radius:8px; cursor:pointer; }
+  </style>
+</head>
+<body>
+  <h1>Canvas Export</h1>
+  <form id="f">
+    <label>Canvas API Base</label>
+    <input type="text" id="api_base" required value="https://myccsd.instructure.com/api/v1"/>
+
+    <label>Canvas Access Token</label>
+    <input type="password" id="token" required autocomplete="off"/>
+
+    <div class="row">
+      <label><input type="checkbox" id="include_concluded"> Include concluded courses</label>
+    </div>
+    <div class="row">
+      <label><input type="checkbox" id="download_page_linked_files" checked> Download files linked in pages</label>
+    </div>
+    <div class="row">
+      <label><input type="checkbox" id="download_all_files"> Download all Files area items</label>
+    </div>
+
+    <div style="margin-top:16px;">
+      <button type="submit">Export</button>
+    </div>
+  </form>
+
+  <p id="msg"></p>
+
+  <script>
+    const backend = location.origin.replace(/\/$/, ""); // same origin by default
+
+    document.getElementById("f").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const api_base = document.getElementById("api_base").value.trim();
+      const token = document.getElementById("token").value.trim();
+      const include_concluded = document.getElementById("include_concluded").checked;
+      const download_page_linked_files = document.getElementById("download_page_linked_files").checked;
+      const download_all_files = document.getElementById("download_all_files").checked;
+
+      document.getElementById("msg").textContent = "Working… this can take a few minutes.";
+      try {
+        const res = await fetch(`${backend}/export`, {
+          method: "POST",
+          headers: {"Content-Type": "application/json"},
+          body: JSON.stringify({ api_base, token, include_concluded, download_page_linked_files, download_all_files })
+        });
+        if (!res.ok) {
+          const t = await res.text();
+          throw new Error(`Export failed (${res.status}): ${t}`);
+        }
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "canvas_export.zip";
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+        document.getElementById("msg").textContent = "Done! Your download should start automatically.";
+      } catch (err) {
+        document.getElementById("msg").textContent = err.message || String(err);
+      }
+    });
+  </script>
+</body>
+</html>
