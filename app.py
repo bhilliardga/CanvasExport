@@ -22,6 +22,13 @@ app.add_middleware(
     allow_methods=["POST", "OPTIONS"],
     allow_headers=["*"],
 )
+@app.get("/")
+def read_root():
+    return {"ok": True, "service": "canvas-exporter", "docs": "/docs"}
+
+@app.get("/health")
+def health():
+    return {"status": "healthy"}
 
 # ---------------- HTTP helpers & pagination ----------------
 def _next_link(headers: Dict[str, str]) -> Optional[str]:
@@ -365,5 +372,6 @@ def export_canvas(payload: Dict[str, Any]):
     finally:
         # wipe workspace
         shutil.rmtree(tmp, ignore_errors=True)
+
 
 
