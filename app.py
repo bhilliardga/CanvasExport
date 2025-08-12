@@ -4,6 +4,11 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 import requests
+from html.parser import HTMLParser
+import re
+import os
+import requests
+from typing import Set
 
 app = FastAPI(title="Canvas Exporter")
 app.add_middleware(
@@ -356,3 +361,4 @@ def export_canvas(payload: Dict[str, Any]):
     finally:
         # wipe workspace
         shutil.rmtree(tmp, ignore_errors=True)
+
