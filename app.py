@@ -35,17 +35,18 @@ import os
 
 app = FastAPI()
 
+from fastapi.middleware.cors import CORSMiddleware
+
+# replace with your actual backend file's code location
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "null",                      # <-- file:// pages send Origin: null
-        os.getenv("ALLOWED_ORIGIN", "https://thunderous-gelato-87f4aa.netlify.app/"),
+        "https://thunderous-gelato-87f4aa.netlify.app",  # <-- your Netlify site
     ],
-    allow_origin_regex=os.getenv("ALLOWED_ORIGIN_REGEX") or None,
-    allow_methods=["*"],
-    allow_headers=["*"],
-    expose_headers=["Content-Disposition"],
-    allow_credentials=False,        # keep False when using "*" or "null"
+    allow_methods=["*"],            # allow POST/GET/OPTIONS...
+    allow_headers=["*"],            # allow Content-Type, etc.
+    expose_headers=["Content-Disposition"],  # so browser sees filename on download
+    allow_credentials=False,        # keep False when using specific origins unless you need cookies
     max_age=86400,
 )
 
@@ -391,6 +392,7 @@ def export_canvas(payload: Dict[str, Any]):
     finally:
         # wipe workspace
         shutil.rmtree(tmp, ignore_errors=True)
+
 
 
 
