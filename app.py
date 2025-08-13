@@ -39,7 +39,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "null",                      # <-- file:// pages send Origin: null
-        os.getenv("ALLOWED_ORIGIN", "*"),
+        os.getenv("ALLOWED_ORIGIN", "https://thunderous-gelato-87f4aa.netlify.app/"),
     ],
     allow_origin_regex=os.getenv("ALLOWED_ORIGIN_REGEX") or None,
     allow_methods=["*"],
@@ -391,6 +391,7 @@ def export_canvas(payload: Dict[str, Any]):
     finally:
         # wipe workspace
         shutil.rmtree(tmp, ignore_errors=True)
+
 
 
 
