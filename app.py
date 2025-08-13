@@ -37,13 +37,16 @@ app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[os.getenv("ALLOWED_ORIGIN", "*")],  # set to your site in prod
-    allow_origin_regex=os.getenv("ALLOWED_ORIGIN_REGEX", None),  # e.g. r"https://.*\.yourdomain\.com"
-    allow_methods=["*"],            # allow POST and others
-    allow_headers=["*"],            # allow Content-Type, etc.
-    expose_headers=["Content-Disposition"],  # so browser can see filename on download
-    allow_credentials=False,        # keep False if using "*"
-    max_age=86400,                  # cache preflight
+    allow_origins=[
+        "null",                      # <-- file:// pages send Origin: null
+        os.getenv("ALLOWED_ORIGIN", "*"),
+    ],
+    allow_origin_regex=os.getenv("ALLOWED_ORIGIN_REGEX") or None,
+    allow_methods=["*"],
+    allow_headers=["*"],
+    expose_headers=["Content-Disposition"],
+    allow_credentials=False,        # keep False when using "*" or "null"
+    max_age=86400,
 )
 
 # ---------------- HTTP helpers & pagination ----------------
@@ -388,6 +391,7 @@ def export_canvas(payload: Dict[str, Any]):
     finally:
         # wipe workspace
         shutil.rmtree(tmp, ignore_errors=True)
+
 
 
 
