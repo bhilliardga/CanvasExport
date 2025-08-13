@@ -30,6 +30,22 @@ def read_root():
 def health():
     return {"status": "healthy"}
 
+from fastapi.middleware.cors import CORSMiddleware
+import os
+
+app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[os.getenv("ALLOWED_ORIGIN", "*")],  # set to your site in prod
+    allow_origin_regex=os.getenv("ALLOWED_ORIGIN_REGEX", None),  # e.g. r"https://.*\.yourdomain\.com"
+    allow_methods=["*"],            # allow POST and others
+    allow_headers=["*"],            # allow Content-Type, etc.
+    expose_headers=["Content-Disposition"],  # so browser can see filename on download
+    allow_credentials=False,        # keep False if using "*"
+    max_age=86400,                  # cache preflight
+)
+
 # ---------------- HTTP helpers & pagination ----------------
 def _next_link(headers: Dict[str, str]) -> Optional[str]:
     link = headers.get("Link") or headers.get("link")
@@ -372,6 +388,7 @@ def export_canvas(payload: Dict[str, Any]):
     finally:
         # wipe workspace
         shutil.rmtree(tmp, ignore_errors=True)
+
 
 
 
