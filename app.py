@@ -61,6 +61,8 @@ def _next_link(headers: Dict[str, str]) -> Optional[str]:
             return segs[0].strip()[1:-1]
     return None
 
+
+
 def _get(url: str, headers: Dict[str, str], params: Dict[str, Any] | None = None) -> requests.Response:
     tries = 0
     while True:
@@ -69,8 +71,13 @@ def _get(url: str, headers: Dict[str, str], params: Dict[str, Any] | None = None
             tries += 1
             time.sleep(min(30, 2 ** tries))
             continue
-        r.raise_for_status()
-        return r
+        try:
+            r.raise_for_status()
+            return r
+        except requests.HTTPError:
+            print(f"[Canvas ERROR] {r.status_code} GET {url} -> {r.text[:500]}")
+            raise
+
 
 def fetch_all(url: str, headers: Dict[str, str], params: Dict[str, Any] | None = None) -> List[Dict[str, Any]]:
     out, first = [], True
@@ -441,6 +448,7 @@ async def log_requests(request, call_next):
         import traceback
         traceback.print_exc()
         raise
+
 
 
 
