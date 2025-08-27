@@ -400,42 +400,67 @@ def export_canvas(payload: Dict[str, Any]):
         # wipe workspace
         shutil.rmtree(tmp, ignore_errors=True)
 
+# in app.py
+
+def compact_course(course: dict, limit: int = 200) -> dict:
+    def take(xs, n): return (xs or [])[:n]
+    return {
+        "id": course.get("id"),
+        "name": course.get("name"),
+        "course_code": course.get("course_code"),
+        "assignments": [
+            {
+                "id": a.get("id"),
+                "name": a.get("name"),
+                "due_at": a.get("due_at"),
+                "points_possible": a.get("points_possible"),
+                "html_url": a.get("html_url"),
+                "submission_types": a.get("submission_types"),
+            } for a in take(course.get("assignments"), limit)
+        ],
+        "pages": [
+            {
+                "url": p.get("url"),
+                "title": p.get("title"),
+                "updated_at": p.get("updated_at"),
+                "html_url": p.get("html_url"),
+            } for p in take(course.get("pages"), limit)
+        ],
+        "files": [
+            {
+                "id": f.get("id"),
+                "display_name": f.get("display_name") or f.get("filename"),
+                "content_type": f.get("content-type") or f.get("content_type"),
+                "size": f.get("size"),
+                "url": f.get("url") or f.get("download_url") or f.get("public_url"),
+            } for f in take(course.get("files"), limit)
+        ],
+        # keep discussions/quizzes/modules minimal or omit entirely if not needed
+    }
+
 @app.post("/structured_export")
 def structured_export(payload: Dict[str, Any]):
-    """
-    Body JSON:
-    {
-      "api_base": "https://myccsd.instructure.com/api/v1",
-      "token": "...",
-      "include_concluded": false
-    }
-    """
-    api_base = payload.get("api_base")
-    token = payload.get("token")
+    api_base = payload.get("api_base"); token = payload.get("token")
     include_concluded = bool(payload.get("include_concluded", False))
+    compact = bool(payload.get("compact", True))
+    limit = int(payload.get("limit_per_section", 200))
+    include = set(payload.get("include", ["assignments","pages","files"]))  # default: small
 
-    if not api_base or not token:
-        raise HTTPException(status_code=400, detail="api_base and token are required.")
+    # ...validate_token(...) and get courses...
 
-    try:
-        courses = get_courses(api_base, token, include_concluded=include_concluded)
-        all_data = []
+    all_data = []
+    for c in courses:
+        course_obj = collect_course(api_base, token, c)
+        # optionally strip unwanted sections before compacting
+        if "assignments" not in include: course_obj["assignments"] = []
+        if "pages" not in include:       course_obj["pages"] = []
+        if "files" not in include:       course_obj["files"] = []
+        # (drop discussions/quizzes/modules unless explicitly requested)
 
-        for c in courses:
-            try:
-                course_obj = collect_course(api_base, token, c)
-                all_data.append(course_obj)
-            except Exception as e:
-                all_data.append({
-                    "id": c.get("id"),
-                    "name": c.get("name"),
-                    "error": str(e)
-                })
+        all_data.append(compact_course(course_obj, limit) if compact else course_obj)
 
-        return {"courses": all_data}
+    return {"courses": all_data}
 
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
 @app.middleware("http")
 async def log_requests(request, call_next):
@@ -456,6 +481,7 @@ def ping_canvas(payload: Dict[str, Any]):
         raise HTTPException(status_code=400, detail="api_base and token required")
     user = validate_token(api_base, token)  # calls /users/self
     return {"ok": True, "user_id": user.get("id"), "name": user.get("name")}
+
 
 
 
