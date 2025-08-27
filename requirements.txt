@@ -5,3 +5,4 @@ python-multipart
 pdfplumber
 python-docx
 python-dotenv
+requests>=2.28.0
