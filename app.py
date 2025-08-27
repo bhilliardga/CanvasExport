@@ -430,6 +430,18 @@ def structured_export(payload: Dict[str, Any]):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.middleware("http")
+async def log_requests(request, call_next):
+    print(f">>> {request.method} {request.url.path}")
+    try:
+        resp = await call_next(request)
+        print(f"<<< {resp.status_code} {request.method} {request.url.path}")
+        return resp
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise
+
 
 
 
