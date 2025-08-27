@@ -393,6 +393,42 @@ def export_canvas(payload: Dict[str, Any]):
         # wipe workspace
         shutil.rmtree(tmp, ignore_errors=True)
 
+@app.post("/structured_export")
+def structured_export(payload: Dict[str, Any]):
+    """
+    Body JSON:
+    {
+      "api_base": "https://myccsd.instructure.com/api/v1",
+      "token": "...",
+      "include_concluded": false
+    }
+    """
+    api_base = payload.get("api_base")
+    token = payload.get("token")
+    include_concluded = bool(payload.get("include_concluded", False))
+
+    if not api_base or not token:
+        raise HTTPException(status_code=400, detail="api_base and token are required.")
+
+    try:
+        courses = get_courses(api_base, token, include_concluded=include_concluded)
+        all_data = []
+
+        for c in courses:
+            try:
+                course_obj = collect_course(api_base, token, c)
+                all_data.append(course_obj)
+            except Exception as e:
+                all_data.append({
+                    "id": c.get("id"),
+                    "name": c.get("name"),
+                    "error": str(e)
+                })
+
+        return {"courses": all_data}
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 
