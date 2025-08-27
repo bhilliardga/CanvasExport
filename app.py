@@ -440,26 +440,58 @@ def compact_course(course: dict, limit: int = 200) -> dict:
 
 @app.post("/structured_export")
 def structured_export(payload: Dict[str, Any]):
-    api_base = payload.get("api_base"); token = payload.get("token")
+    """
+    Same input as /export, but returns JSON instead of a ZIP.
+    Optional:
+      - include: list[str] sections to include
+      - compact: bool
+      - limit_per_section: int
+    """
+    api_base = payload.get("api_base")
+    token = payload.get("token")
     include_concluded = bool(payload.get("include_concluded", False))
-    compact = bool(payload.get("compact", True))
+    include = set(payload.get("include", ["assignments","pages","files","discussions","quizzes","modules"]))
+    compact = bool(payload.get("compact", False))
     limit = int(payload.get("limit_per_section", 200))
-    include = set(payload.get("include", ["assignments","pages","files"]))  # default: small
 
-    # ...validate_token(...) and get courses...
+    if not api_base or not token:
+        raise HTTPException(status_code=400, detail="api_base and token are required.")
 
-    all_data = []
+    print(f"[structured_export] api_base={api_base} token_prefix={token[:6]}***")
+    validate_token(api_base, token)
+
+    try:
+        courses = get_courses(api_base, token, include_concluded=include_concluded)
+        print(f"[structured_export] fetched {len(courses)} courses")
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"Failed to list courses: {e}")
+
+    all_data: List[Dict[str, Any]] = []
     for c in courses:
-        course_obj = collect_course(api_base, token, c)
-        # optionally strip unwanted sections before compacting
-        if "assignments" not in include: course_obj["assignments"] = []
-        if "pages" not in include:       course_obj["pages"] = []
-        if "files" not in include:       course_obj["files"] = []
-        # (drop discussions/quizzes/modules unless explicitly requested)
+        try:
+            course_obj = collect_course(api_base, token, c)
 
-        all_data.append(compact_course(course_obj, limit) if compact else course_obj)
+            # Optionally drop sections not requested
+            if "assignments" not in include: course_obj["assignments"] = []
+            if "pages" not in include:       course_obj["pages"] = []
+            if "files" not in include:       course_obj["files"] = []
+            if "discussions" not in include: course_obj["discussions"] = []
+            if "quizzes" not in include:     course_obj["quizzes"] = []
+            if "modules" not in include:     course_obj["modules"] = []
+
+            if compact:
+                course_obj = compact_course(course_obj, limit)  # define helper if you use compacting
+
+            all_data.append(course_obj)
+        except Exception as e:
+            all_data.append({
+                "id": c.get("id"),
+                "name": c.get("name"),
+                "error": str(e)
+            })
 
     return {"courses": all_data}
+
 
 
 @app.middleware("http")
@@ -481,6 +513,7 @@ def ping_canvas(payload: Dict[str, Any]):
         raise HTTPException(status_code=400, detail="api_base and token required")
     user = validate_token(api_base, token)  # calls /users/self
     return {"ok": True, "user_id": user.get("id"), "name": user.get("name")}
+
 
 
 
