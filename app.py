@@ -13,6 +13,7 @@ from html.parser import HTMLParser
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
+from fastapi import HTTPException
 
 app = FastAPI(title="Canvas Exporter")
 app.add_middleware(
@@ -438,6 +439,40 @@ def compact_course(course: dict, limit: int = 200) -> dict:
         # keep discussions/quizzes/modules minimal or omit entirely if not needed
     }
 
+from fastapi import HTTPException
+
+def safe_json(resp):
+    try:
+        return resp.json()
+    except Exception:
+        return resp.text
+
+def validate_token(api_base: str, token: str):
+    """Confirms the token by calling /users/self. Raises 401 on failure."""
+    import requests
+    h = {"Authorization": f"Bearer {token}"}
+    url = f"{api_base}/users/self"
+    try:
+        r = requests.get(url, headers=h, timeout=30)
+        if r.status_code != 200:
+            raise HTTPException(
+                status_code=401,
+                detail={
+                    "message": "Canvas token invalid or expired",
+                    "status": r.status_code,
+                    "api": url,
+                    "response": safe_json(r),
+                },
+            )
+        return r.json()
+    except requests.HTTPError as e:
+        resp = e.response
+        raise HTTPException(
+            status_code=resp.status_code if resp is not None else 500,
+            detail={"message": "Failed to validate token", "api": url, "response": safe_json(resp) if resp else None},
+        )
+
+
 @app.post("/structured_export")
 def structured_export(payload: Dict[str, Any]):
     """
@@ -513,6 +548,7 @@ def ping_canvas(payload: Dict[str, Any]):
         raise HTTPException(status_code=400, detail="api_base and token required")
     user = validate_token(api_base, token)  # calls /users/self
     return {"ok": True, "user_id": user.get("id"), "name": user.get("name")}
+
 
 
 
