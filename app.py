@@ -449,6 +449,14 @@ async def log_requests(request, call_next):
         traceback.print_exc()
         raise
 
+@app.post("/ping_canvas")
+def ping_canvas(payload: Dict[str, Any]):
+    api_base = payload.get("api_base"); token = payload.get("token")
+    if not api_base or not token:
+        raise HTTPException(status_code=400, detail="api_base and token required")
+    user = validate_token(api_base, token)  # calls /users/self
+    return {"ok": True, "user_id": user.get("id"), "name": user.get("name")}
+
 
 
 
